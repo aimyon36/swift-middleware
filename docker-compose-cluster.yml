@@ -5,21 +5,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: swift-app
+    deploy:
+      replicas: 3
     environment:
-      # PostgreSQL
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: swift_middleware
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      # RabbitMQ
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: guest
       RABBITMQ_PASSWORD: guest
     ports:
-      - "8080:8080"
+      - "8080-8082:8080"
     depends_on:
       postgres:
         condition: service_healthy
