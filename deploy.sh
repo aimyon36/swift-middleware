@@ -24,19 +24,23 @@ else
 fi
 
 echo ""
-echo "1. 构建并启动所有服务..."
+echo "1. 停止现有服务..."
+$COMPOSE down
+
+echo ""
+echo "2. 构建并启动所有服务..."
 $COMPOSE up -d --build
 
 echo ""
-echo "2. 等待服务启动..."
+echo "3. 等待服务启动..."
 sleep 10
 
 echo ""
-echo "3. 检查服务状态..."
+echo "4. 检查服务状态..."
 $COMPOSE ps
 
 echo ""
-echo "4. 检查应用健康状态..."
+echo "5. 检查应用健康状态..."
 for i in {1..30}; do
     if curl -s http://localhost:8080/actuator/health &> /dev/null; then
         echo "应用启动成功!"
