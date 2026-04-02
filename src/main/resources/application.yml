@@ -1,0 +1,61 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: swift-middleware
+  datasource:
+    url: jdbc:postgresql://localhost:5432/swift_middleware
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jackson:
+    date-format: yyyy-MM-dd'T'HH:mm:ss'Z'
+    time-zone: UTC
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.bank.swift.model.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+logging:
+  level:
+    com.bank.swift: DEBUG
+    org.springframework.amqp: INFO
+
+# 自定义配置
+swift:
+  gateway:
+    saa:
+      port: 8081
+    amh:
+      port: 8082
+  notification:
+    http:
+      connect-timeout-ms: 5000
+      read-timeout-ms: 10000
+      max-retry: 3
+    mq:
+      exchange: swift.message.exchange
+      queues:
+        raw: swift.message.raw
+        parsed: swift.message.parsed
+        notified: swift.message.notified
+      routing-keys:
+        raw: swift.raw
+        parsed: swift.parsed
+        notified: swift.notified

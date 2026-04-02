@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(mvn spring-boot:run -DskipTests)",
+      "Bash(curl -s http://localhost:8080/actuator/health)",
+      "Bash(curl -s http://localhost:8080/)",
+      "mcp__context7__query-docs",
+      "WebSearch",
+      "WebFetch(domain:search.maven.org)",
+      "Bash(mvn spring-boot:run -DskipTests -U)",
+      "Bash(curl -k -I https://repo1.maven.org/maven2/io/prowide/prowide-core/23.09/prowide-core-23.09.pom)",
+      "Bash(curl -s \"https://search.maven.org/solrsearch/select?q=a:prowide*&rows=20&wt=json\")",
+      "Bash(curl -s \"https://search.maven.org/solrsearch/select?q=prowide&rows=20&wt=json\")",
+      "Bash(curl -s \"https://search.maven.org/solrsearch/select?q=swift+iso20022&rows=30&wt=json\")",
+      "Bash(curl -s \"https://repo1.maven.org/maven2/io/prowide/\")",
+      "Bash(curl -s \"https://repo1.maven.org/maven2/com/prowidesoftware/\")",
+      "Bash(curl -s \"https://repo1.maven.org/maven2/com/prowidesoftware/pw-iso20022/\")",
+      "Bash(curl:*)",
+      "Bash(java:*)",
+      "Bash(where java:*)",
+      "Read(//c/Program Files/Java/**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Bash(dir /s /b \"C:\\\\Program Files\\\\Java\\\\jdk*\")",
+      "Read(//c/Users/51193/.jdks/**)",
+      "Read(//c/Program Files/JetBrains/**)",
+      "Bash(export JAVA_HOME=\"C:/Users/51193/.jdks/openjdk-21.0.2.intellij\")",
+      "Bash(C:/Users/51193/.jdks/openjdk-21.0.2/bin/java.exe:*)",
+      "Bash(export JAVA_HOME=\"C:/Users/51193/.jdks/openjdk-21.0.2\")",
+      "Bash(export PATH=\"$JAVA_HOME/bin:$PATH\")",
+      "Bash(mvn clean:*)",
+      "Bash(pkill -f \"swift-middleware\")",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //F //PID 70276)",
+      "Bash(mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8080\")",
+      "Bash(gh auth:*)"
+    ]
+  }
+}

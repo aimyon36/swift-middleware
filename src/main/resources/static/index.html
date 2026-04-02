@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWIFT报文中间件 - 管理后台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #1890ff;
+            --success: #52c41a;
+            --warning: #faad14;
+            --error: #ff4d4f;
+            --text: #333;
+            --text-secondary: #666;
+            --border: #e8e8e8;
+            --bg: #f5f5f5;
+            --card-bg: #fff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        /* 顶部导航 */
+        .navbar {
+            background: var(--primary);
+            color: #fff;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        .navbar h1 { font-size: 20px; font-weight: 600; }
+        .navbar .nav-links { display: flex; gap: 24px; }
+        .navbar .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; transition: color 0.3s; }
+        .navbar .nav-links a:hover, .navbar .nav-links a.active { color: #fff; }
+
+        /* 主容器 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 88px 24px 24px;
+        }
+
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .stat-card .label { color: var(--text-secondary); font-size: 14px; margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: 600; color: var(--primary); }
+        .stat-card .sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+        .stat-card.success .value { color: var(--success); }
+        .stat-card.warning .value { color: var(--warning); }
+        .stat-card.error .value { color: var(--error); }
+
+        /* 选项卡 */
+        .tabs {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+        }
+
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 16px 24px;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            font-size: 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover { color: var(--primary); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        .tab-content { display: none; padding: 24px; }
+        .tab-content.active { display: block; }
+
+        /* 卡片区块 */
+        .section { margin-bottom: 32px; }
+        .section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+
+        /* 表格 */
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #fafafa; font-weight: 600; color: var(--text-secondary); font-size: 13px; }
+        tr:hover { background: #f5f5f5; }
+        .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .status-tag.success { background: #f6ffed; color: var(--success); border: 1px solid var(--success); }
+        .status-tag.error { background: #fff2f0; color: var(--error); border: 1px solid var(--error); }
+        .status-tag.warning { background: #fffbe6; color: var(--warning); border: 1px solid var(--warning); }
+        .status-tag.info { background: #e6f7ff; color: var(--primary); border: 1px solid var(--primary); }
+
+        /* 按钮 */
+        .btn { padding: 8px 16px; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .btn-primary:hover { background: #40a9ff; }
+        .btn-danger { color: var(--error); border-color: var(--error); }
+        .btn-danger:hover { background: var(--error); color: #fff; }
+        .btn-small { padding: 4px 8px; font-size: 12px; }
+
+        /* 表单 */
+        .form-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 13px; color: var(--text-secondary); }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; min-width: 180px;
+        }
+        .form-group textarea { min-width: 300px; resize: vertical; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); }
+
+        /* 搜索栏 */
+        .search-bar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+        .search-bar input, .search-bar select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; }
+
+        /* 分页 */
+        .pagination { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 16px; }
+        .pagination button { padding: 6px 12px; border: 1px solid var(--border); background: #fff; cursor: pointer; border-radius: 4px; }
+        .pagination button:hover { border-color: var(--primary); color: var(--primary); }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination .page-info { font-size: 13px; color: var(--text-secondary); }
+
+        /* 模态框 */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; z-index: 2000; align-items: center; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: #fff; border-radius: 8px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; }
+        .modal-body { padding: 24px; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+        /* 消息列表 */
+        .message-list { display: flex; flex-direction: column; gap: 8px; }
+        .message-item { background: #fafafa; padding: 12px 16px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.3s; }
+        .message-item:hover { background: #f0f0f0; }
+        .message-item .msg-info { display: flex; gap: 16px; align-items: center; }
+        .message-item .msg-id { font-weight: 600; color: var(--primary); }
+        .message-item .msg-type { font-size: 13px; color: var(--text-secondary); }
+        .message-item .msg-time { font-size: 12px; color: var(--text-secondary); }
+
+        /* 时间线 */
+        .timeline { display: flex; flex-direction: column; gap: 0; padding-left: 20px; border-left: 2px solid var(--border); margin-left: 8px; }
+        .timeline-item { position: relative; padding: 8px 0 16px 24px; }
+        .timeline-item::before { content: ''; position: absolute; left: -25px; top: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+        .timeline-item .time { font-size: 12px; color: var(--text-secondary); }
+        .timeline-item .status { font-weight: 600; margin-top: 2px; }
+
+        /* JSON展示 */
+        .json-viewer { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 4px; font-family: 'Monaco', 'Menlo', monospace; font-size: 13px; overflow-x: auto; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 80px; right: 24px; z-index: 3000; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 12px 20px; border-radius: 4px; color: #fff; font-size: 14px; animation: slideIn 0.3s ease; }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--error); }
+        .toast.warning { background: var(--warning); }
+        .toast.info { background: var(--primary); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* 加载动画 */
+        .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .form-row { flex-direction: column; }
+            .form-group input, .form-group select, .form-group textarea { width: 100%; min-width: unset; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            table { font-size: 12px; }
+            th, td { padding: 8px 4px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>SWIFT报文中间件</h1>
+        <div class="nav-links">
+            <a href="#" class="active" onclick="showTab('dashboard')">总览</a>
+            <a href="#" onclick="showTab('messages')">报文管理</a>
+            <a href="#" onclick="showTab('inbound')">报文接入</a>
+            <a href="#" onclick="showTab('outbound')">报文发送</a>
+            <a href="#" onclick="showTab('routes')">路由规则</a>
+            <a href="#" onclick="showTab('subscriptions')">订阅配置</a>
+            <a href="#" onclick="showTab('notifications')">通知日志</a>
+            <a href="#" onclick="showTab('stats')">统计报表</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 总览 -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">今日报文总量</div>
+                    <div class="value" id="stat-total">-</div>
+                    <div class="sub">成功率: <span id="stat-rate">-</span></div>
+                </div>
+                <div class="stat-card success">
+                    <div class="label">入向报文</div>
+                    <div class="value" id="stat-inbound">-</div>
+                    <div class="sub">从SWIFT接收</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="label">出向报文</div>
+                    <div class="value" id="stat-outbound">-</div>
+                    <div class="sub">发送到SWIFT</div>
+                </div>
+                <div class="stat-card error">
+                    <div class="label">失败报文</div>
+                    <div class="value" id="stat-failed">-</div>
+                    <div class="sub">需人工处理</div>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">报文类型分布</div>
+                    <div class="sub" id="stat-types">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">平均处理时间</div>
+                    <div class="value" style="font-size: 20px" id="stat-avg-time">-</div>
+                    <div class="sub">毫秒</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">各系统通知状态</div>
+                    <div class="sub" id="stat-systems">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">峰值时段</div>
+                    <div class="value" style="font-size: 20px" id="stat-peak">-</div>
+                    <div class="sub">报文量最高</div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">最近报文</div>
+                <div class="message-list" id="recent-messages"></div>
+            </div>
+        </div>
+
+        <!-- 报文管理 -->
+        <div id="messages" class="tab-content">
+            <div class="section">
+                <div class="section-title">报文列表查询</div>
+                <div class="search-bar">
+                    <select id="msg-search-type" onchange="searchMessages()">
+                        <option value="">全部类型</option>
+                        <option value="pacs.008.001.08">pacs.008.001.08</option>
+                        <option value="pain.001.001.09">pain.001.001.09</option>
+                        <option value="pacs.002.001.08">pacs.002.001.08</option>
+                        <option value="camt.056.001.08">camt.056.001.08</option>
+                    </select>
+                    <select id="msg-search-direction">
+                        <option value="">全部方向</option>
+                        <option value="INBOUND">入向</option>
+                        <option value="OUTBOUND">出向</option>
+                    </select>
+                    <select id="msg-search-status">
+                        <option value="">全部状态</option>
+                        <option value="RECEIVED">已接收</option>
+                        <option value="PARSING">解析中</option>
+                        <option value="PARSED">已解析</option>
+                        <option value="ROUTING">路由中</option>
+                        <option value="ROUTED">已路由</option>
+                        <option value="FAILED">失败</option>
+                    </select>
+                    <input type="text" id="msg-search-sender" placeholder="发送方BIC" style="width:120px">
+                    <input type="text" id="msg-search-receiver" placeholder="接收方BIC" style="width:120px">
+                    <button class="btn btn-primary" onclick="searchMessages()">查询</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>报文ID</th>
+                                <th>报文类型</th>
+                                <th>方向</th>
+                                <th>状态</th>
+                                <th>发送方</th>
+                                <th>接收方</th>
+                                <th>时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="messages-table-body"></tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <span class="page-info" id="msg-page-info">共 0 条</span>
+                    <button onclick="prevPage()" id="msg-prev-btn">上一页</button>
+                    <button onclick="nextPage()" id="msg-next-btn">下一页</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 报文接入 -->
+        <div id="inbound" class="tab-content">
+            <div class="section">
+                <div class="section-title">接收SWIFT MX报文</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>报文ID *</label>
+                        <input type="text" id="inbound-message-id" placeholder="由系统生成或手动输入">
+                    </div>
+                    <div class="form-group">
+                        <label>报文类型 *</label>
+                        <select id="inbound-message-type">
+                            <option value="pacs.008.001.08">pacs.008.001.08 - 金融信贷转账</option>
+                            <option value="pain.001.001.09">pain.001.001.09 - 支付发起请求</option>
+                            <option value="pacs.002.001.08">pacs.002.001.08 - 支付状态报告</option>
+                            <option value="camt.056.001.08">camt.056.001.08 - 支付撤销请求</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>发送方BIC *</label>
+                        <input type="text" id="inbound-sender" placeholder="如: AAAAGC0XXX">
+                    </div>
+                    <div class="form-group">
+                        <label>接收方BIC *</label>
+                        <input type="text" id="inbound-receiver" placeholder="如: BBBGCB0XXX">
+                    </div>
+                </div>
+                <div class="form-group" style="width:100%">
+                    <label>原始XML报文内容 *</label>
+                    <textarea id="inbound-raw-xml" rows="15" placeholder="粘贴SWIFT MX XML报文"></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="submitInbound()">提交报文</button>
+            </div>
+        </div>
+
+        <!-- 报文发送 -->
+        <div id="outbound" class="tab-content">
+            <div class="section">
+                <div class="section-title">发送SWIFT MX报文</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>报文类型 *</label>
+                        <select id="outbound-message-type">
+                            <option value="pacs.008.001.08">pacs.008.001.08 - 金融信贷转账</option>
+                            <option value="pain.001.001.09">pain.001.001.09 - 支付发起请求</option>
+                            <option value="pacs.002.001.08">pacs.002.001.08 - 支付状态报告</option>
+                            <option value="camt.056.001.08">camt.056.001.08 - 支付撤销请求</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>发送方BIC *</label>
+                        <input type="text" id="outbound-sender" placeholder="本行BIC">
+                    </div>
+                    <div class="form-group">
+                        <label>接收方BIC *</label>
+                        <input type="text" id="outbound-receiver" placeholder="对方行BIC">
+                    </div>
+                </div>
+                <div class="section-title" style="margin-top:24px">业务数据</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>源账户</label>
+                        <input type="text" id="outbound-src-account" placeholder="付款账户">
+                    </div>
+                    <div class="form-group">
+                        <label>目标账户</label>
+                        <input type="text" id="outbound-dest-account" placeholder="收款账户">
+                    </div>
+                    <div class="form-group">
+                        <label>源银行BIC</label>
+                        <input type="text" id="outbound-src-bank" placeholder="付款行">
+                    </div>
+                    <div class="form-group">
+                        <label>目标银行BIC</label>
+                        <input type="text" id="outbound-dest-bank" placeholder="收款行">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>金额</label>
+                        <input type="number" id="outbound-amount" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>币种</label>
+                        <select id="outbound-currency">
+                            <option value="CNY">CNY - 人民币</option>
+                            <option value="USD">USD - 美元</option>
+                            <option value="EUR">EUR - 欧元</option>
+                            <option value="GBP">GBP - 英镑</option>
+                            <option value="HKD">HKD - 港币</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>起息日</label>
+                        <input type="date" id="outbound-value-date">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>参考号</label>
+                        <input type="text" id="outbound-reference" placeholder="业务参考号">
+                    </div>
+                    <div class="form-group">
+                        <label>用途</label>
+                        <input type="text" id="outbound-purpose" placeholder="付款用途" style="width:300px">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>内部回调URL (可选)</label>
+                    <input type="text" id="outbound-callback-url" placeholder="处理完成后通知的URL">
+                </div>
+                <button class="btn btn-primary" onclick="submitOutbound()">发送报文</button>
+            </div>
+        </div>
+
+        <!-- 路由规则 -->
+        <div id="routes" class="tab-content">
+            <div class="section">
+                <div class="section-title">
+                    路由规则配置
+                    <button class="btn btn-primary" style="margin-left:16px" onclick="openRouteModal()">新增规则</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>报文类型</th>
+                                <th>业务场景</th>
+                                <th>目标系统</th>
+                                <th>路由规则</th>
+                                <th>优先级</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="routes-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 订阅配置 -->
+        <div id="subscriptions" class="tab-content">
+            <div class="section">
+                <div class="section-title">
+                    内部系统订阅配置
+                    <button class="btn btn-primary" style="margin-left:16px" onclick="openSubscriptionModal()">新增订阅</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>系统代码</th>
+                                <th>系统名称</th>
+                                <th>端点类型</th>
+                                <th>端点地址</th>
+                                <th>订阅报文类型</th>
+                                <th>认证方式</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subscriptions-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 通知日志 -->
+        <div id="notifications" class="tab-content">
+            <div class="section">
+                <div class="section-title">通知日志查询</div>
+                <div class="search-bar">
+                    <input type="text" id="notif-search-msgid" placeholder="报文ID">
+                    <select id="notif-search-system">
+                        <option value="">全部系统</option>
+                        <option value="CASH_MGMT">现金管理</option>
+                        <option value="CORE_BANKING">核心银行</option>
+                        <option value="CREDIT_CARD">信用卡</option>
+                    </select>
+                    <select id="notif-search-status">
+                        <option value="">全部状态</option>
+                        <option value="PENDING">等待中</option>
+                        <option value="SUCCESS">成功</option>
+                        <option value="FAILED">失败</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="searchNotifications()">查询</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>报文ID</th>
+                                <th>目标系统</th>
+                                <th>渠道</th>
+                                <th>状态</th>
+                                <th>重试次数</th>
+                                <th>时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="notifications-table-body"></tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <span class="page-info" id="notif-page-info">共 0 条</span>
+                    <button onclick="prevNotifPage()">上一页</button>
+                    <button onclick="nextNotifPage()">下一页</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计报表 -->
+        <div id="stats" class="tab-content">
+            <div class="section">
+                <div class="section-title">统计报表</div>
+                <div class="form-row" style="margin-bottom:24px">
+                    <div class="form-group">
+                        <label>开始日期</label>
+                        <input type="date" id="stats-start-date">
+                    </div>
+                    <div class="form-group">
+                        <label>结束日期</label>
+                        <input type="date" id="stats-end-date">
+                    </div>
+                    <button class="btn btn-primary" onclick="queryStats()">查询</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">报文总量</div>
+                        <div class="value" id="stats-total">-</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="label">入向报文</div>
+                        <div class="value" id="stats-inbound">-</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="label">出向报文</div>
+                        <div class="value" id="stats-outbound">-</div>
+                    </div>
+                    <div class="stat-card error">
+                        <div class="label">失败数量</div>
+                        <div class="value" id="stats-failed">-</div>
+                    </div>
+                </div>
+                <div class="section-title" style="margin-top:24px">报文类型分布</div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>报文类型</th><th>数量</th><th>占比</th></tr></thead>
+                        <tbody id="stats-type-body"></tbody>
+                    </table>
+                </div>
+                <div class="section-title" style="margin-top:24px">状态分布</div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>状态</th><th>数量</th><th>占比</th></tr></thead>
+                        <tbody id="stats-status-body"></tbody>
+                    </table>
+                </div>
+                <div class="section-title" style="margin-top:24px">各系统通知情况</div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>系统</th><th>成功数</th><th>失败数</th><th>成功率</th></tr></thead>
+                        <tbody id="stats-systems-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报文详情模态框 -->
+    <div class="modal-overlay" id="message-detail-modal">
+        <div class="modal" style="max-width:800px">
+            <div class="modal-header">
+                <h3>报文详情</h3>
+                <button class="btn" onclick="closeModal('message-detail-modal')">关闭</button>
+            </div>
+            <div class="modal-body" id="message-detail-content"></div>
+        </div>
+    </div>
+
+    <!-- 路由规则模态框 -->
+    <div class="modal-overlay" id="route-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="route-modal-title">新增路由规则</h3>
+                <button class="btn" onclick="closeModal('route-modal')">关闭</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="route-id">
+                <div class="form-group" style="margin-bottom:16px">
+                    <label>报文类型 *</label>
+                    <select id="route-message-type">
+                        <option value="pacs.008.001.08">pacs.008.001.08</option>
+                        <option value="pain.001.001.09">pain.001.001.09</option>
+                        <option value="pacs.002.001.08">pacs.002.001.08</option>
+                        <option value="camt.056.001.08">camt.056.001.08</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:16px">
+                    <label>业务场景</label>
+                    <input type="text" id="route-scenario" placeholder="如: CREDIT_TRANSFER">
+                </div>
+                <div class="form-group" style="margin-bottom:16px">
+                    <label>目标系统 *</label>
+                    <select id="route-target-system">
+                        <option value="CASH_MGMT">现金管理系统</option>
+                        <option value="CORE_BANKING">核心银行系统</option>
+                        <option value="CREDIT_CARD">信用卡系统</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:16px">
+                    <label>路由规则表达式</label>
+                    <input type="text" id="route-rule" placeholder="如: amount > 10000 AND currency = 'CNY'">
+                </div>
+                <div class="form-group" style="margin-bottom:16px">
+                    <label>优先级</label>
+                    <input type="number" id="route-priority" value="1">
+                </div>
+                <div class="form-group">
+                    <label>启用状态</label>
+                    <select id="route-enabled">
+                        <option value="true">启用</option>
+                        <option value="false">禁用</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('route-modal')">取消</button>
+                <button class="btn btn-primary" onclick="saveRoute()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 订阅配置模态框 -->
+    <div class="modal-overlay" id="subscription-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="subscription-modal-title">新增订阅配置</h3>
+                <button class="btn" onclick="closeModal('subscription-modal')">关闭</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="subscription-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>系统代码 *</label>
+                        <input type="text" id="sub-system-code" placeholder="如: CASH_MGMT">
+                    </div>
+                    <div class="form-group">
+                        <label>系统名称 *</label>
+                        <input type="text" id="sub-system-name" placeholder="如: 现金管理系统">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:16px">
+                    <label>端点类型 *</label>
+                    <select id="sub-endpoint-type" onchange="toggleEndpointFields()">
+                        <option value="HTTP">HTTP回调</option>
+                        <option value="MQ">消息队列(MQ)</option>
+                    </select>
+                </div>
+                <div id="http-fields">
+                    <div class="form-group" style="margin-bottom:16px">
+                        <label>HTTP端点URL *</label>
+                        <input type="text" id="sub-endpoint-url" placeholder="https://...">
+                    </div>
+                </div>
+                <div id="mq-fields" style="display:none">
+                    <div class="form-group" style="margin-bottom:16px">
+                        <label>MQ类型</label>
+                        <select id="sub-mq-type">
+                            <option value="RABBITMQ">RabbitMQ</option>
+                            <option value="KAFKA">Kafka</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:16px">
+                        <label>MQ Topic *</label>
+                        <input type="text" id="sub-mq-topic" placeholder="swift.message.xxx">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:16px">
+                    <label>订阅报文类型 * (逗号分隔)</label>
+                    <input type="text" id="sub-message-types" placeholder="pacs.008.001.08,pain.001.001.09">
+                </div>
+                <div class="form-group" style="margin-bottom:16px">
+                    <label>认证方式</label>
+                    <select id="sub-auth-type" onchange="toggleAuthFields()">
+                        <option value="NONE">无</option>
+                        <option value="BASIC">Basic认证</option>
+                        <option value="BEARER_TOKEN">Bearer Token</option>
+                    </select>
+                </div>
+                <div id="auth-fields" style="display:none">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>用户名</label>
+                            <input type="text" id="sub-auth-username">
+                        </div>
+                        <div class="form-group">
+                            <label>密码/Token</label>
+                            <input type="password" id="sub-auth-password">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>重试次数</label>
+                        <input type="number" id="sub-retry-count" value="3">
+                    </div>
+                    <div class="form-group">
+                        <label>超时(ms)</label>
+                        <input type="number" id="sub-timeout" value="5000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>启用状态</label>
+                    <select id="sub-enabled">
+                        <option value="true">启用</option>
+                        <option value="false">禁用</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('subscription-modal')">取消</button>
+                <button class="btn btn-primary" onclick="saveSubscription()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知日志详情模态框 -->
+    <div class="modal-overlay" id="notif-detail-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>通知详情</h3>
+                <button class="btn" onclick="closeModal('notif-detail-modal')">关闭</button>
+            </div>
+            <div class="modal-body" id="notif-detail-content"></div>
+        </div>
+    </div>
+
+    <!-- Toast容器 -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // API基础地址
+        const API_BASE = 'http://localhost:8080/api/v1';
+
+        // 分页状态
+        let msgPage = 1, msgSize = 20, msgTotal = 0;
+        let notifPage = 1, notifSize = 20, notifTotal = 0;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+            setDefaultDates();
+        });
+
+        function setDefaultDates() {
+            const today = new Date();
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            document.getElementById('stats-start-date').value = formatDate(weekAgo);
+            document.getElementById('stats-end-date').value = formatDate(today);
+        }
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        // Tab切换
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-links a').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabId === 'dashboard') loadDashboard();
+            else if (tabId === 'messages') { searchMessages(); }
+            else if (tabId === 'routes') loadRoutes();
+            else if (tabId === 'subscriptions') loadSubscriptions();
+            else if (tabId === 'notifications') searchNotifications();
+            else if (tabId === 'stats') queryStats();
+        }
+
+        // Toast提示
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // API请求封装
+        async function apiRequest(url, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json' }
+            };
+            if (body) options.body = JSON.stringify(body);
+
+            try {
+                const response = await fetch(`${API_BASE}${url}`, options);
+                const data = await response.json();
+                if (data.code !== '0000') {
+                    showToast(data.message || '操作失败', 'error');
+                    throw new Error(data.message);
+                }
+                return data;
+            } catch (error) {
+                if (error.message !== 'Failed to fetch') {
+                    throw error;
+                }
+                // 后端未启动时的模拟数据
+                return mockResponse(url, method, body);
+            }
+        }
+
+        // 模拟响应（后端未启动时使用）
+        function mockResponse(url, method, body) {
+            if (url.includes('/stats')) {
+                return {
+                    code: '0000',
+                    data: {
+                        summary: { totalMessages: 12580, inboundCount: 9840, outboundCount: 2740, successRate: 99.2 },
+                        byType: [
+                            { messageType: 'pacs.008.001.08', count: 6500 },
+                            { messageType: 'pain.001.001.09', count: 4200 },
+                            { messageType: 'camt.056.001.08', count: 1880 }
+                        ],
+                        byStatus: [
+                            { status: 'ROUTED', count: 12480 },
+                            { status: 'FAILED', count: 100 }
+                        ],
+                        byNotification: [
+                            { system: 'CASH_MGMT', successCount: 12000, failedCount: 15 },
+                            { system: 'CORE_BANKING', successCount: 9800, failedCount: 8 },
+                            { system: 'CREDIT_CARD', successCount: 7500, failedCount: 22 }
+                        ],
+                        avgProcessingTime: 186,
+                        peakHour: '10:00-11:00'
+                    }
+                };
+            }
+            if (url.includes('/messages') && method === 'GET' && !url.includes('/notifications')) {
+                return {
+                    code: '0000',
+                    data: {
+                        records: generateMockMessages(10),
+                        pagination: { page: msgPage, size: msgSize, total: 150, pages: 8 }
+                    }
+                };
+            }
+            if (url.includes('/routes')) {
+                if (method === 'GET') {
+                    return {
+                        code: '0000',
+                        data: [
+                            { id: 1, messageType: 'pacs.008.001.08', businessScenario: 'CREDIT_TRANSFER', targetSystem: 'CASH_MGMT', routingRule: 'amount > 10000', priority: 1, enabled: true },
+                            { id: 2, messageType: 'pacs.008.001.08', businessScenario: 'CREDIT_TRANSFER', targetSystem: 'CORE_BANKING', routingRule: null, priority: 2, enabled: true },
+                            { id: 3, messageType: 'pain.001.001.09', businessScenario: 'PAYMENT_REQUEST', targetSystem: 'CASH_MGMT', routingRule: null, priority: 1, enabled: true },
+                            { id: 4, messageType: 'camt.056.001.08', businessScenario: 'PAYMENT_REVOKE', targetSystem: 'CASH_MGMT', routingRule: null, priority: 1, enabled: true }
+                        ]
+                    };
+                }
+            }
+            if (url.includes('/subscriptions')) {
+                if (method === 'GET') {
+                    return {
+                        code: '0000',
+                        data: [
+                            { id: 1, systemCode: 'CASH_MGMT', systemName: '现金管理系统', endpointType: 'HTTP', endpointUrl: 'http://localhost:8082/api/callback', messageTypes: ['pacs.008.001.08', 'pain.001.001.09'], authType: 'BEARER_TOKEN', enabled: true },
+                            { id: 2, systemCode: 'CORE_BANKING', systemName: '核心银行系统', endpointType: 'HTTP', endpointUrl: 'http://localhost:8083/api/callback', messageTypes: ['pacs.008.001.08'], authType: 'BASIC', enabled: true },
+                            { id: 3, systemCode: 'CREDIT_CARD', systemName: '信用卡系统', endpointType: 'MQ', mqType: 'KAFKA', mqTopic: 'swift.message.cc', messageTypes: ['pacs.008.001.08'], authType: 'NONE', enabled: true }
+                        ]
+                    };
+                }
+            }
+            if (url.includes('/notifications')) {
+                return {
+                    code: '0000',
+                    data: {
+                        records: generateMockNotifications(10),
+                        pagination: { page: notifPage, size: notifSize, total: 80, pages: 4 }
+                    }
+                };
+            }
+            return { code: '0000', data: {} };
+        }
+
+        function generateMockMessages(count) {
+            const types = ['pacs.008.001.08', 'pain.001.001.09', 'pacs.002.001.08', 'camt.056.001.08'];
+            const statuses = ['RECEIVED', 'PARSED', 'ROUTED', 'FAILED'];
+            const bics = ['AAAAGC0XXX', 'BBBGBC0XXX', 'CCCKCJBXXX', 'DDDTSBTHHH'];
+            const messages = [];
+            for (let i = 0; i < count; i++) {
+                const date = new Date(Date.now() - Math.random() * 86400000 * 7);
+                messages.push({
+                    id: 1000 + i,
+                    messageId: `MSG${Date.now().toString().slice(-10)}${i}`,
+                    messageType: types[Math.floor(Math.random() * types.length)],
+                    direction: Math.random() > 0.2 ? 'INBOUND' : 'OUTBOUND',
+                    status: statuses[Math.floor(Math.random() * statuses.length)],
+                    senderBic: bics[Math.floor(Math.random() * bics.length)],
+                    receiverBic: bics[Math.floor(Math.random() * bics.length)],
+                    createdAt: date.toISOString()
+                });
+            }
+            return messages;
+        }
+
+        function generateMockNotifications(count) {
+            const systems = ['CASH_MGMT', 'CORE_BANKING', 'CREDIT_CARD'];
+            const statuses = ['SUCCESS', 'SUCCESS', 'SUCCESS', 'FAILED', 'PENDING'];
+            const notifs = [];
+            for (let i = 0; i < count; i++) {
+                notifs.push({
+                    id: 100 + i,
+                    messageId: 1000 + Math.floor(i / 3),
+                    targetSystem: systems[Math.floor(Math.random() * systems.length)],
+                    channel: Math.random() > 0.3 ? 'HTTP' : 'MQ',
+                    status: statuses[Math.floor(Math.random() * statuses.length)],
+                    retryCount: Math.floor(Math.random() * 3),
+                    createdAt: new Date(Date.now() - Math.random() * 86400000).toISOString()
+                });
+            }
+            return notifs;
+        }
+
+        // ========== Dashboard ==========
+        async function loadDashboard() {
+            try {
+                const data = await apiRequest('/admin/stats?startDate=' + document.getElementById('stats-start-date').value + '&endDate=' + document.getElementById('stats-end-date').value);
+                if (data.data) {
+                    document.getElementById('stat-total').textContent = data.data.summary?.totalMessages || 0;
+                    document.getElementById('stat-rate').textContent = (data.data.summary?.successRate || 0) + '%';
+                    document.getElementById('stat-inbound').textContent = data.data.summary?.inboundCount || 0;
+                    document.getElementById('stat-outbound').textContent = data.data.summary?.outboundCount || 0;
+                    document.getElementById('stat-failed').textContent = data.data.summary?.totalMessages - Math.round(data.data.summary?.totalMessages * (data.data.summary?.successRate || 100) / 100);
+                    document.getElementById('stat-avg-time').textContent = data.data.avgProcessingTime || 0;
+                    document.getElementById('stat-peak').textContent = data.data.peakHour || '-';
+                    document.getElementById('stat-systems').innerHTML = (data.data.byNotification || []).map(s => `${s.system}: ${s.successCount}`).join('<br>');
+                }
+            } catch (e) { console.error(e); }
+            loadRecentMessages();
+        }
+
+        async function loadRecentMessages() {
+            try {
+                const data = await apiRequest('/messages?page=1&size=5');
+                const container = document.getElementById('recent-messages');
+                container.innerHTML = '';
+                (data.data?.records || []).forEach(msg => {
+                    const item = document.createElement('div');
+                    item.className = 'message-item';
+                    item.onclick = () => showMessageDetail(msg.messageId);
+                    item.innerHTML = `
+                        <div class="msg-info">
+                            <span class="msg-id">${msg.messageId}</span>
+                            <span class="msg-type">${msg.messageType}</span>
+                            <span class="status-tag ${msg.status === 'ROUTED' ? 'success' : msg.status === 'FAILED' ? 'error' : 'info'}">${msg.status}</span>
+                        </div>
+                        <span class="msg-time">${new Date(msg.createdAt).toLocaleString()}</span>
+                    `;
+                    container.appendChild(item);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        // ========== 报文列表 ==========
+        async function searchMessages() {
+            msgPage = 1;
+            await loadMessages();
+        }
+
+        async function loadMessages() {
+            try {
+                const type = document.getElementById('msg-search-type').value;
+                const direction = document.getElementById('msg-search-direction').value;
+                const status = document.getElementById('msg-search-status').value;
+                let url = `/messages?page=${msgPage}&size=${msgSize}`;
+                if (type) url += `&messageType=${type}`;
+                if (direction) url += `&direction=${direction}`;
+                if (status) url += `&status=${status}`;
+
+                const data = await apiRequest(url);
+                const tbody = document.getElementById('messages-table-body');
+                tbody.innerHTML = '';
+
+                (data.data?.records || []).forEach(msg => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><a href="javascript:void(0)" onclick="showMessageDetail('${msg.messageId}')" style="color:var(--primary)">${msg.messageId}</a></td>
+                        <td>${msg.messageType}</td>
+                        <td>${msg.direction === 'INBOUND' ? '入向' : '出向'}</td>
+                        <td><span class="status-tag ${getStatusClass(msg.status)}">${getStatusText(msg.status)}</span></td>
+                        <td>${msg.senderBic || '-'}</td>
+                        <td>${msg.receiverBic || '-'}</td>
+                        <td>${new Date(msg.createdAt).toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-small" onclick="showMessageDetail('${msg.messageId}')">详情</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                msgTotal = data.data?.pagination?.total || 0;
+                document.getElementById('msg-page-info').textContent = `共 ${msgTotal} 条`;
+                document.getElementById('msg-prev-btn').disabled = msgPage <= 1;
+                document.getElementById('msg-next-btn').disabled = msgPage >= (data.data?.pagination?.pages || 1);
+            } catch (e) { console.error(e); }
+        }
+
+        function getStatusClass(status) {
+            if (status === 'ROUTED' || status === 'PARSED') return 'success';
+            if (status === 'FAILED') return 'error';
+            if (status === 'PENDING') return 'warning';
+            return 'info';
+        }
+
+        function getStatusText(status) {
+            const map = { RECEIVED: '已接收', PARSING: '解析中', PARSED: '已解析', ROUTING: '路由中', ROUTED: '已路由', FAILED: '失败', PENDING: '等待中', SUCCESS: '成功' };
+            return map[status] || status;
+        }
+
+        function prevPage() { if (msgPage > 1) { msgPage--; loadMessages(); } }
+        function nextPage() { msgPage++; loadMessages(); }
+
+        async function showMessageDetail(id) {
+            // 如果是数字类型，则是数据库ID，调用 id 端点；否则是 messageId
+            const endpoint = /^\d+$/.test(String(id)) ? `/messages/id/${id}` : `/messages/${id}`;
+            const data = await apiRequest(endpoint);
+            const msg = data.data || {};
+            const content = document.getElementById('message-detail-content');
+            content.innerHTML = `
+                <div class="form-row">
+                    <div class="form-group"><label>报文ID</label><div>${msg.messageId || '-'}</div></div>
+                    <div class="form-group"><label>报文类型</label><div>${msg.messageType || '-'}</div></div>
+                    <div class="form-group"><label>方向</label><div>${msg.direction === 'INBOUND' ? '入向' : '出向'}</div></div>
+                    <div class="form-group"><label>状态</label><div><span class="status-tag ${getStatusClass(msg.status)}">${getStatusText(msg.status)}</span></div></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>发送方BIC</label><div>${msg.senderBic || '-'}</div></div>
+                    <div class="form-group"><label>接收方BIC</label><div>${msg.receiverBic || '-'}</div></div>
+                    <div class="form-group"><label>创建时间</label><div>${msg.createdAt ? new Date(msg.createdAt).toLocaleString() : '-'}</div></div>
+                </div>
+                ${msg.businessData ? `
+                <div class="section-title">业务数据</div>
+                <div class="form-row">
+                    <div class="form-group"><label>源账户</label><div>${msg.businessData.sourceAccount || '-'}</div></div>
+                    <div class="form-group"><label>目标账户</label><div>${msg.businessData.destAccount || '-'}</div></div>
+                    <div class="form-group"><label>金额</label><div>${msg.businessData.amount ? msg.businessData.amount + ' ' + (msg.businessData.currency || '') : '-'}</div></div>
+                </div>
+                ` : ''}
+                ${msg.notifications ? `
+                <div class="section-title">通知情况</div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>系统</th><th>状态</th><th>时间</th></tr></thead>
+                        <tbody>
+                            ${(msg.notifications || []).map(n => `<tr><td>${n.system}</td><td><span class="status-tag ${n.status === 'SUCCESS' ? 'success' : 'error'}">${n.status}</span></td><td>${n.sentAt ? new Date(n.sentAt).toLocaleString() : '-'}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : ''}
+                ${msg.timeline ? `
+                <div class="section-title">处理时间线</div>
+                <div class="timeline">
+                    ${(msg.timeline || []).map(t => `<div class="timeline-item"><div class="time">${new Date(t.time).toLocaleString()}</div><div class="status">${getStatusText(t.status)}</div></div>`).join('')}
+                </div>
+                ` : ''}
+                ${msg.rawContent ? `
+                <div class="section-title">原始报文</div>
+                <div class="json-viewer">${escapeHtml(msg.rawContent || '')}</div>
+                ` : ''}
+            `;
+            document.getElementById('message-detail-modal').classList.add('show');
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ========== 报文接入 ==========
+        async function submitInbound() {
+            const messageId = document.getElementById('inbound-message-id').value;
+            const messageType = document.getElementById('inbound-message-type').value;
+            const senderBic = document.getElementById('inbound-sender').value;
+            const receiverBic = document.getElementById('inbound-receiver').value;
+            const rawXml = document.getElementById('inbound-raw-xml').value;
+
+            if (!rawXml) {
+                showToast('请输入原始XML报文', 'error');
+                return;
+            }
+
+            const request = {
+                messageId: messageId || `INB${Date.now()}`,
+                messageType,
+                senderBic,
+                receiverBic,
+                rawXml,
+                sentTime: new Date().toISOString()
+            };
+
+            try {
+                const data = await apiRequest('/saa/inbound', 'POST', request);
+                showToast('报文提交成功', 'success');
+                // 清空表单
+                document.getElementById('inbound-raw-xml').value = '';
+            } catch (e) { showToast('提交失败: ' + e.message, 'error'); }
+        }
+
+        // ========== 报文发送 ==========
+        async function submitOutbound() {
+            const messageType = document.getElementById('outbound-message-type').value;
+            const senderBic = document.getElementById('outbound-sender').value;
+            const receiverBic = document.getElementById('outbound-receiver').value;
+            const businessData = {
+                sourceAccount: document.getElementById('outbound-src-account').value,
+                destAccount: document.getElementById('outbound-dest-account').value,
+                sourceBank: document.getElementById('outbound-src-bank').value,
+                destBank: document.getElementById('outbound-dest-bank').value,
+                amount: parseFloat(document.getElementById('outbound-amount').value) || 0,
+                currency: document.getElementById('outbound-currency').value,
+                valueDate: document.getElementById('outbound-value-date').value,
+                reference: document.getElementById('outbound-reference').value,
+                purpose: document.getElementById('outbound-purpose').value
+            };
+            const callbackUrl = document.getElementById('outbound-callback-url').value;
+
+            const request = {
+                messageType,
+                senderBic,
+                receiverBic,
+                businessData,
+                callbackUrl
+            };
+
+            try {
+                const data = await apiRequest('/saa/outbound', 'POST', request);
+                showToast('报文发送成功: ' + (data.data?.messageId || ''), 'success');
+            } catch (e) { showToast('发送失败: ' + e.message, 'error'); }
+        }
+
+        // ========== 路由规则 ==========
+        async function loadRoutes() {
+            try {
+                const data = await apiRequest('/admin/routes');
+                const tbody = document.getElementById('routes-table-body');
+                tbody.innerHTML = '';
+                (data.data || []).forEach(route => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${route.id}</td>
+                        <td>${route.messageType}</td>
+                        <td>${route.businessScenario || '-'}</td>
+                        <td>${route.targetSystem}</td>
+                        <td>${route.routingRule || '-'}</td>
+                        <td>${route.priority}</td>
+                        <td><span class="status-tag ${route.enabled ? 'success' : 'error'}">${route.enabled ? '启用' : '禁用'}</span></td>
+                        <td>
+                            <button class="btn btn-small" onclick="editRoute(${route.id})">编辑</button>
+                            <button class="btn btn-small btn-danger" onclick="deleteRoute(${route.id})">删除</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function openRouteModal(route = null) {
+            document.getElementById('route-modal-title').textContent = route ? '编辑路由规则' : '新增路由规则';
+            document.getElementById('route-id').value = route?.id || '';
+            document.getElementById('route-message-type').value = route?.messageType || 'pacs.008.001.08';
+            document.getElementById('route-scenario').value = route?.businessScenario || '';
+            document.getElementById('route-target-system').value = route?.targetSystem || 'CASH_MGMT';
+            document.getElementById('route-rule').value = route?.routingRule || '';
+            document.getElementById('route-priority').value = route?.priority || 1;
+            document.getElementById('route-enabled').value = route?.enabled !== false ? 'true' : 'false';
+            document.getElementById('route-modal').classList.add('show');
+        }
+
+        function editRoute(id) {
+            const routes = window._routesData || [];
+            const route = routes.find(r => r.id === id);
+            if (route) openRouteModal(route);
+        }
+
+        async function saveRoute() {
+            const id = document.getElementById('route-id').value;
+            const route = {
+                messageType: document.getElementById('route-message-type').value,
+                businessScenario: document.getElementById('route-scenario').value,
+                targetSystem: document.getElementById('route-target-system').value,
+                routingRule: document.getElementById('route-rule').value,
+                priority: parseInt(document.getElementById('route-priority').value) || 1,
+                enabled: document.getElementById('route-enabled').value === 'true'
+            };
+
+            try {
+                if (id) {
+                    await apiRequest(`/admin/routes/${id}`, 'PUT', route);
+                    showToast('更新成功', 'success');
+                } else {
+                    await apiRequest('/admin/routes', 'POST', route);
+                    showToast('创建成功', 'success');
+                }
+                closeModal('route-modal');
+                loadRoutes();
+            } catch (e) { showToast('保存失败', 'error'); }
+        }
+
+        async function deleteRoute(id) {
+            if (!confirm('确认删除此路由规则?')) return;
+            try {
+                await apiRequest(`/admin/routes/${id}`, 'DELETE');
+                showToast('删除成功', 'success');
+                loadRoutes();
+            } catch (e) { showToast('删除失败', 'error'); }
+        }
+
+        // ========== 订阅配置 ==========
+        async function loadSubscriptions() {
+            try {
+                const data = await apiRequest('/admin/subscriptions');
+                const tbody = document.getElementById('subscriptions-table-body');
+                tbody.innerHTML = '';
+                (data.data || []).forEach(sub => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${sub.id}</td>
+                        <td>${sub.systemCode}</td>
+                        <td>${sub.systemName}</td>
+                        <td><span class="status-tag ${sub.endpointType === 'HTTP' ? 'info' : 'warning'}">${sub.endpointType}</span></td>
+                        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${sub.endpointUrl || sub.mqTopic || '-'}</td>
+                        <td>${typeof sub.messageTypes === 'string' ? sub.messageTypes : (sub.messageTypes || []).join(', ')}</td>
+                        <td>${sub.authType}</td>
+                        <td><span class="status-tag ${sub.enabled ? 'success' : 'error'}">${sub.enabled ? '启用' : '禁用'}</span></td>
+                        <td>
+                            <button class="btn btn-small" onclick="editSubscription(${sub.id})">编辑</button>
+                            <button class="btn btn-small btn-danger" onclick="deleteSubscription(${sub.id})">删除</button>
+                            <button class="btn btn-small" onclick="testSubscription(${sub.id})">测试</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function toggleEndpointFields() {
+            const type = document.getElementById('sub-endpoint-type').value;
+            document.getElementById('http-fields').style.display = type === 'HTTP' ? 'block' : 'none';
+            document.getElementById('mq-fields').style.display = type === 'MQ' ? 'block' : 'none';
+        }
+
+        function toggleAuthFields() {
+            const type = document.getElementById('sub-auth-type').value;
+            document.getElementById('auth-fields').style.display = type === 'NONE' ? 'none' : 'block';
+        }
+
+        function openSubscriptionModal(sub = null) {
+            document.getElementById('subscription-modal-title').textContent = sub ? '编辑订阅配置' : '新增订阅配置';
+            document.getElementById('subscription-id').value = sub?.id || '';
+            document.getElementById('sub-system-code').value = sub?.systemCode || '';
+            document.getElementById('sub-system-name').value = sub?.systemName || '';
+            document.getElementById('sub-endpoint-type').value = sub?.endpointType || 'HTTP';
+            document.getElementById('sub-endpoint-url').value = sub?.endpointUrl || '';
+            document.getElementById('sub-mq-type').value = sub?.mqType || 'KAFKA';
+            document.getElementById('sub-mq-topic').value = sub?.mqTopic || '';
+            document.getElementById('sub-message-types').value = (sub?.messageTypes || []).join(',');
+            document.getElementById('sub-auth-type').value = sub?.authType || 'NONE';
+            document.getElementById('sub-auth-username').value = sub?.authUsername || '';
+            document.getElementById('sub-auth-password').value = sub?.authPassword || '';
+            document.getElementById('sub-retry-count').value = sub?.retryCount || 3;
+            document.getElementById('sub-timeout').value = sub?.timeoutMs || 5000;
+            document.getElementById('sub-enabled').value = sub?.enabled !== false ? 'true' : 'false';
+            toggleEndpointFields();
+            toggleAuthFields();
+            document.getElementById('subscription-modal').classList.add('show');
+        }
+
+        function editSubscription(id) {
+            const subs = window._subsData || [];
+            const sub = subs.find(s => s.id === id);
+            if (sub) openSubscriptionModal(sub);
+        }
+
+        async function saveSubscription() {
+            const id = document.getElementById('subscription-id').value;
+            const endpointType = document.getElementById('sub-endpoint-type').value;
+            const messageTypesStr = document.getElementById('sub-message-types').value;
+
+            const sub = {
+                systemCode: document.getElementById('sub-system-code').value,
+                systemName: document.getElementById('sub-system-name').value,
+                endpointType,
+                endpointUrl: endpointType === 'HTTP' ? document.getElementById('sub-endpoint-url').value : null,
+                mqType: endpointType === 'MQ' ? document.getElementById('sub-mq-type').value : null,
+                mqTopic: endpointType === 'MQ' ? document.getElementById('sub-mq-topic').value : null,
+                messageTypes: messageTypesStr,
+                authType: document.getElementById('sub-auth-type').value,
+                authUsername: document.getElementById('sub-auth-username').value,
+                authPassword: document.getElementById('sub-auth-password').value,
+                retryCount: parseInt(document.getElementById('sub-retry-count').value) || 3,
+                timeoutMs: parseInt(document.getElementById('sub-timeout').value) || 5000,
+                enabled: document.getElementById('sub-enabled').value === 'true'
+            };
+
+            try {
+                if (id) {
+                    await apiRequest(`/admin/subscriptions/${id}`, 'PUT', sub);
+                    showToast('更新成功', 'success');
+                } else {
+                    await apiRequest('/admin/subscriptions', 'POST', sub);
+                    showToast('创建成功', 'success');
+                }
+                closeModal('subscription-modal');
+                loadSubscriptions();
+            } catch (e) { showToast('保存失败', 'error'); }
+        }
+
+        async function deleteSubscription(id) {
+            if (!confirm('确认删除此订阅配置?')) return;
+            try {
+                await apiRequest(`/admin/subscriptions/${id}`, 'DELETE');
+                showToast('删除成功', 'success');
+                loadSubscriptions();
+            } catch (e) { showToast('删除失败', 'error'); }
+        }
+
+        async function testSubscription(id) {
+            try {
+                const data = await apiRequest(`/admin/subscriptions/${id}/test`, 'POST');
+                showToast('连接测试成功', 'success');
+            } catch (e) { showToast('测试失败', 'error'); }
+        }
+
+        // ========== 通知日志 ==========
+        async function searchNotifications() {
+            notifPage = 1;
+            await loadNotifications();
+        }
+
+        async function loadNotifications() {
+            try {
+                const msgId = document.getElementById('notif-search-msgid').value;
+                const system = document.getElementById('notif-search-system').value;
+                const status = document.getElementById('notif-search-status').value;
+                let url = `/messages/notifications?page=${notifPage}&size=${notifSize}`;
+                if (msgId) url += `&messageId=${msgId}`;
+                if (system) url += `&targetSystem=${system}`;
+                if (status) url += `&status=${status}`;
+
+                const data = await apiRequest(url);
+                const tbody = document.getElementById('notifications-table-body');
+                tbody.innerHTML = '';
+
+                (data.data?.records || []).forEach(notif => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${notif.id}</td>
+                        <td><a href="javascript:void(0)" onclick="showMessageDetail(${notif.messageId})" style="color:var(--primary)">${notif.messageId}</a></td>
+                        <td>${notif.targetSystem}</td>
+                        <td><span class="status-tag info">${notif.channel}</span></td>
+                        <td><span class="status-tag ${getStatusClass(notif.status)}">${getStatusText(notif.status)}</span></td>
+                        <td>${notif.retryCount}</td>
+                        <td>${new Date(notif.createdAt).toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-small" onclick="showNotifDetail(${notif.id})">详情</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                notifTotal = data.data?.pagination?.total || 0;
+                document.getElementById('notif-page-info').textContent = `共 ${notifTotal} 条`;
+            } catch (e) { console.error(e); }
+        }
+
+        function prevNotifPage() { if (notifPage > 1) { notifPage--; loadNotifications(); } }
+        function nextNotifPage() { notifPage++; loadNotifications(); }
+
+        async function showNotifDetail(id) {
+            const data = await apiRequest(`/messages/notifications?messageId=${id}`);
+            const notif = data.data?.records?.[0] || {};
+            document.getElementById('notif-detail-content').innerHTML = `
+                <div class="form-row">
+                    <div class="form-group"><label>通知ID</label><div>${notif.id}</div></div>
+                    <div class="form-group"><label>报文ID</label><div>${notif.messageId}</div></div>
+                    <div class="form-group"><label>目标系统</label><div>${notif.targetSystem}</div></div>
+                    <div class="form-group"><label>渠道</label><div>${notif.channel}</div></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>状态</label><div><span class="status-tag ${getStatusClass(notif.status)}">${getStatusText(notif.status)}</span></div></div>
+                    <div class="form-group"><label>重试次数</label><div>${notif.retryCount}</div></div>
+                    <div class="form-group"><label>MQ Offset</label><div>${notif.mqOffset || '-'}</div></div>
+                </div>
+                ${notif.requestPayload ? `<div class="section-title">请求Payload</div><div class="json-viewer">${escapeHtml(notif.requestPayload)}</div>` : ''}
+                ${notif.responsePayload ? `<div class="section-title">响应Payload</div><div class="json-viewer">${escapeHtml(notif.responsePayload)}</div>` : ''}
+                ${notif.errorMessage ? `<div class="section-title" style="color:var(--error)">错误信息</div><div class="json-viewer" style="border-color:var(--error)">${escapeHtml(notif.errorMessage)}</div>` : ''}
+            `;
+            document.getElementById('notif-detail-modal').classList.add('show');
+        }
+
+        // ========== 统计 ==========
+        async function queryStats() {
+            const startDate = document.getElementById('stats-start-date').value;
+            const endDate = document.getElementById('stats-end-date').value;
+            if (!startDate || !endDate) { showToast('请选择日期范围', 'warning'); return; }
+
+            try {
+                const data = await apiRequest(`/admin/stats?startDate=${startDate}&endDate=${endDate}`);
+                const d = data.data;
+                if (!d) return;
+
+                document.getElementById('stats-total').textContent = d.summary?.totalMessages || 0;
+                document.getElementById('stats-inbound').textContent = d.summary?.inboundCount || 0;
+                document.getElementById('stats-outbound').textContent = d.summary?.outboundCount || 0;
+                document.getElementById('stats-failed').textContent = (d.summary?.totalMessages || 0) - (d.summary?.inboundCount || 0) - (d.summary?.outboundCount || 0);
+
+                const total = d.summary?.totalMessages || 1;
+                const typeBody = document.getElementById('stats-type-body');
+                typeBody.innerHTML = (d.byType || []).map(t => `<tr><td>${t.messageType}</td><td>${t.count}</td><td>${((t.count / total) * 100).toFixed(1)}%</td></tr>`).join('');
+
+                const statusBody = document.getElementById('stats-status-body');
+                statusBody.innerHTML = (d.byStatus || []).map(s => `<tr><td>${getStatusText(s.status)}</td><td>${s.count}</td><td>${((s.count / total) * 100).toFixed(1)}%</td></tr>`).join('');
+
+                const sysBody = document.getElementById('stats-systems-body');
+                sysBody.innerHTML = (d.byNotification || []).map(s => {
+                    const total = (s.successCount || 0) + (s.failedCount || 0);
+                    const rate = total > 0 ? ((s.successCount / total) * 100).toFixed(1) : 0;
+                    return `<tr><td>${s.system}</td><td>${s.successCount}</td><td>${s.failedCount}</td><td>${rate}%</td></tr>`;
+                }).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        // ========== 模态框 ==========
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        // 点击模态框外部关闭
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.classList.remove('show');
+            });
+        });
+    </script>
+</body>
+</html>
